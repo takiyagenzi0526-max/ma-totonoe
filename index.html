@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>間ととのえ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* 構成：上に読み込みと全体設定、中央に全体の波形と「選んだ間」の拡大、下に間の一覧 */
+:root {
+  --paper: #eef0ee;
+  --panel: #ffffff;
+  --ink: #1d2330;
+  --muted: #5d6676;
+  --line: #d6dbe1;
+  --voice: #2b8a78;
+  --voice-soft: rgba(43, 138, 120, 0.14);
+  --gap: #c4553b;
+  --gap-soft: rgba(196, 85, 59, 0.16);
+  --keep: #7a8494;
+  --sel: #d9a531;
+  --accent: #2f5d8a;
+  --accent-ink: #ffffff;
+  --f-display: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --f-ui: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #13161c; --panel: #1b1f27; --ink: #e7e9ed; --muted: #9aa3b1; --line: #2d333e;
+    --voice: #46b49e; --voice-soft: rgba(70, 180, 158, 0.16); --gap: #e27b60; --gap-soft: rgba(226, 123, 96, 0.18);
+    --keep: #8a93a2; --sel: #e8c15e; --accent: #7ea6d4; --accent-ink: #10151c; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #13161c; --panel: #1b1f27; --ink: #e7e9ed; --muted: #9aa3b1; --line: #2d333e;
+  --voice: #46b49e; --voice-soft: rgba(70, 180, 158, 0.16); --gap: #e27b60; --gap-soft: rgba(226, 123, 96, 0.18);
+  --keep: #8a93a2; --sel: #e8c15e; --accent: #7ea6d4; --accent-ink: #10151c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--paper); color: var(--ink); font: 15px/1.6 var(--f-ui);
+  padding-block: 20px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 16px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 20px; }
+h1 { font: 800 30px/1.2 var(--f-display); margin: 0; letter-spacing: 0.06em; }
+h1 small { font: 500 13px var(--f-ui); color: var(--muted); letter-spacing: 0.02em; margin-left: 10px; }
+.lead { margin: 0; color: var(--muted); max-width: 62ch; }
+h2 { font: 700 15px/1.4 var(--f-ui); margin: 0; letter-spacing: 0.04em; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.grow { flex: 1 1 auto; min-width: 0; }
+button, .filebtn {
+  font: 500 14px var(--f-ui); border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+  border-radius: 8px; padding: 7px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+}
+button:hover, .filebtn:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+button:focus-visible, input:focus-visible, .filebtn:focus-within { outline: 2px solid var(--sel); outline-offset: 2px; }
+.filebtn input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.drop { border: 1.5px dashed var(--line); border-radius: 10px; padding: 14px; color: var(--muted); }
+.drop.over { border-color: var(--accent); color: var(--ink); }
+.file-name { font-weight: 700; color: var(--ink); overflow-wrap: anywhere; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.chip b { color: var(--ink); font-weight: 700; }
+.sample-tag { background: var(--gap-soft); color: var(--gap); border-color: transparent; }
+label.field { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+label.field span.v { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+input[type="number"] { font: 500 14px var(--f-ui); width: 6.5em; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--ink); font-variant-numeric: tabular-nums; }
+input[type="range"] { width: 180px; accent-color: var(--accent); }
+.settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+.settings > div { display: grid; gap: 10px; align-content: start; min-width: 0; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.presets button { padding: 4px 10px; font-size: 13px; }
+details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+details[open] summary { margin-bottom: 10px; }
+.canvas-box { position: relative; width: 100%; }
+canvas { display: block; width: 100%; border-radius: 6px; background: var(--paper); cursor: pointer; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 5px; }
+.detail { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.detail .cap { font-size: 12px; color: var(--muted); margin-bottom: 4px; display: flex; justify-content: space-between; gap: 8px; }
+.table-box { overflow: auto; max-height: 420px; border: 1px solid var(--line); border-radius: 8px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+th, td { padding: 6px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+th { position: sticky; top: 0; background: var(--panel); font-size: 12px; color: var(--muted); font-weight: 500; z-index: 1; }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: var(--voice-soft); }
+tbody tr.sel { background: var(--gap-soft); }
+td.num { text-align: right; }
+.kind { font-size: 12px; border-radius: 4px; padding: 1px 6px; }
+.kind.short { background: var(--voice-soft); color: var(--voice); }
+.kind.long { background: var(--gap-soft); color: var(--gap); }
+.kind.custom { border: 1px solid var(--sel); color: var(--ink); }
+.kind.keep { border: 1px solid var(--keep); color: var(--keep); }
+.status { font-size: 13px; color: var(--muted); min-height: 1.4em; }
+.play-ind { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>間ととのえ<small>録音の言葉と言葉の間を、自動でそろえる</small></h1>
+  </header>
+  <p class="lead">録音を入れると、声のかたまりと無音を見つけて切り分け、決めた長さの間を入れ直します。気になる間だけ個別に直して、WAVで保存できます。音声はこのパソコンの中だけで処理されます。</p>
+
+  <section class="panel" aria-labelledby="h-file">
+    <h2 id="h-file">1. 録音を読み込む</h2>
+    <div class="drop" id="drop">
+      <div class="row">
+        <label class="filebtn" for="file">ファイルを選ぶ<input type="file" id="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac"></label>
+        <span class="grow">またはここに録音ファイルをドラッグ（mp3・wav・m4a など）</span>
+      </div>
+    </div>
+    <div class="row">
+      <span class="file-name" id="fileName">（読み込み中）</span>
+      <div class="chips" id="stats"></div>
+    </div>
+    <div class="status" id="status" role="status"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-rule">
+    <h2 id="h-rule">2. 間の長さを決める</h2>
+    <div class="settings">
+      <div>
+        <div class="presets" role="group" aria-label="おすすめの組み合わせ">
+          <button type="button" data-preset="0.5,1.0">きびきび</button>
+          <button type="button" data-preset="0.6,1.2">標準</button>
+          <button type="button" data-preset="0.8,1.6">ゆったり</button>
+          <button type="button" data-preset="1.0,2.2">瞑想向け</button>
+        </div>
+        <div class="row">
+          <label class="field" for="shortPause">短い間（読点くらい）<input type="number" id="shortPause" min="0" max="10" step="0.1" value="0.6"></label>
+          <label class="field" for="longPause">長い間（文の切れ目）<input type="number" id="longPause" min="0" max="20" step="0.1" value="1.2"></label>
+        </div>
+      </div>
+      <div>
+        <label class="field" for="boundary"><span>元の無音が <span class="v" id="boundaryV">0.50</span> 秒未満なら「短い間」、それ以上なら「長い間」</span>
+          <input type="range" id="boundary" min="0.2" max="1.5" step="0.05" value="0.5">
+        </label>
+        <button type="button" id="resetCustom">個別に直した間をすべて元に戻す</button>
+      </div>
+      <div>
+        <details>
+          <summary>切り分けの細かい設定</summary>
+          <div style="display:grid; gap:10px">
+            <label class="field" for="thr"><span>無音とみなす音量（背景の雑音より <span class="v" id="thrV">12</span> dB 以内）</span>
+              <input type="range" id="thr" min="4" max="30" step="1" value="12">
+            </label>
+            <label class="field" for="minSil"><span>間として扱う最短の無音 <span class="v" id="minSilV">0.25</span> 秒</span>
+              <input type="range" id="minSil" min="0.1" max="1.0" step="0.05" value="0.25">
+            </label>
+            <div class="row">
+              <label class="field" for="padPre">声の前に残す（秒）<input type="number" id="padPre" min="0" max="0.5" step="0.01" value="0.06"></label>
+              <label class="field" for="padPost">声の後に残す（秒）<input type="number" id="padPost" min="0" max="0.8" step="0.01" value="0.12"></label>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-wave">
+    <div class="row">
+      <h2 id="h-wave" class="grow">3. 確かめる</h2>
+      <button type="button" id="playOrig">元の録音を再生</button>
+      <button type="button" id="playOut">調整後を再生</button>
+      <button type="button" id="stop">停止</button>
+      <span class="play-ind" id="playInd"></span>
+    </div>
+    <div>
+      <div class="detail" style="grid-template-columns:1fr">
+        <div>
+          <div class="cap"><span>元の録音（全体）。縦の帯が間。クリックでその間を選ぶ</span></div>
+          <div class="canvas-box"><canvas id="cvOrig" height="110" aria-label="元の録音の波形"></canvas></div>
+        </div>
+        <div>
+          <div class="cap"><span>調整後（全体）</span></div>
+          <div class="canvas-box"><canvas id="cvOut" height="110" aria-label="調整後の波形"></canvas></div>
+        </div>
+      </div>
+      <div class="legend" style="margin-top:8px">
+        <span><i style="background:var(--voice)"></i>声</span>
+        <span><i style="background:var(--gap-soft); border:1px solid var(--gap)"></i>入れ直す間</span>
+        <span><i style="background:var(--keep)"></i>切らずに元のまま</span>
+        <span><i style="background:var(--sel)"></i>選んでいる間</span>
+      </div>
+    </div>
+    <div class="detail">
+      <div>
+        <div class="cap"><span>選んだ間のまわり（元）</span><span id="capO"></span></div>
+        <canvas id="cvDetO" height="120" aria-label="選んだ間のまわりの元の波形"></canvas>
+      </div>
+      <div>
+        <div class="cap"><span>選んだ間のまわり（調整後）</span><span id="capA"></span></div>
+        <canvas id="cvDetA" height="120" aria-label="選んだ間のまわりの調整後の波形"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-list">
+    <div class="row">
+      <h2 id="h-list" class="grow">4. 間の一覧（気になる所だけ直す）</h2>
+      <button type="button" class="primary" id="save">調整後をWAVで保存</button>
+    </div>
+    <div class="table-box">
+      <table>
+        <thead><tr><th>#</th><th>位置（元）</th><th class="num">元の無音</th><th>種類</th><th>新しい間（秒）</th><th>切らない</th><th>聞く</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <p class="status" style="margin:0">「新しい間」に数字を入れるとその間だけ変わります。「切らない」にチェックすると、そこは元の録音のままつなぎます（言葉の途中の息継ぎなど）。</p>
+  </section>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const S = {
+    buf: null, name: "", sample: false, sr: 44100,
+    mono: null, rms: null, win: 0, peaks: null,
+    segs: [], gaps: [], out: null, outMap: [], sel: -1,
+    ctx: null, src: null, playing: null,
+  };
+
+  // ---------- 小さな道具 ----------
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const fmt = (sec) => {
+    const m = Math.floor(sec / 60), s = sec - m * 60;
+    return `${m}:${s.toFixed(1).padStart(4, "0")}`;
+  };
+  const num = (id) => Math.max(0, parseFloat($(id).value) || 0);
+  const setStatus = (t) => { $("status").textContent = t; };
+
+  // ---------- 読み込み ----------
+  async function loadFile(file) {
+    setStatus("読み込んでいます…");
+    try {
+      const ab = await file.arrayBuffer();
+      const ctx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, 2, 44100);
+      const buf = await ctx.decodeAudioData(ab);
+      S.buf = buf; S.name = file.name; S.sample = false; S.sel = -1;
+      analyze();
+      setStatus("");
+    } catch (e) {
+      setStatus("この形式は読み込めませんでした。mp3・wav・m4a のどれかで試してください。");
+    }
+  }
+  $("file").addEventListener("change", (e) => { const f = e.target.files[0]; if (f) loadFile(f); });
+  const drop = $("drop");
+  ["dragenter", "dragover"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+  ["dragleave", "drop"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
+  drop.addEventListener("drop", (e) => { const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
+  document.addEventListener("dragover", (e) => e.preventDefault());
+  document.addEventListener("drop", (e) => { e.preventDefault(); const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) loadFile(f); });
+
+  // ---------- 声と無音の検出 ----------
+  function analyze() {
+    const buf = S.buf; S.sr = buf.sampleRate;
+    const n = buf.length, chs = buf.numberOfChannels;
+    const mono = new Float32Array(n);
+    for (let c = 0; c < chs; c++) { const d = buf.getChannelData(c); for (let i = 0; i < n; i++) mono[i] += d[i] / chs; }
+    S.mono = mono;
+    const win = Math.round(S.sr * 0.02); S.win = win;
+    const k = Math.ceil(n / win), rms = new Float32Array(k);
+    for (let j = 0; j < k; j++) {
+      let s = 0; const a = j * win, b = Math.min(n, a + win);
+      for (let i = a; i < b; i++) s += mono[i] * mono[i];
+      rms[j] = Math.sqrt(s / Math.max(1, b - a));
+    }
+    S.rms = rms;
+    computePeaks();
+    detect();
+  }
+
+  function detect() {
+    const rms = S.rms, k = rms.length, win = S.win, sr = S.sr;
+    const sorted = Float32Array.from(rms).sort();
+    const noise = Math.max(sorted[Math.floor(k * 0.1)], 1e-5);
+    const thr = Math.max(noise * Math.pow(10, num("thr") / 20), 0.002);
+    const minSil = Math.round(num("minSil") * sr / win);
+    const minVoice = Math.round(0.08 * sr / win);
+    const v = new Uint8Array(k);
+    for (let j = 0; j < k; j++) {
+      const sm = (rms[Math.max(0, j - 1)] + rms[j] + rms[Math.min(k - 1, j + 1)]) / 3;
+      v[j] = sm > thr ? 1 : 0;
+    }
+    const runs = () => { const r = []; let st = 0; for (let j = 1; j <= k; j++) if (j === k || v[j] !== v[st]) { r.push([st, j, v[st]]); st = j; } return r; };
+    // 短すぎる無音は声の一部、短すぎる声（クリック音など）は無音として扱う
+    for (const [a, b, val] of runs()) if (!val && a > 0 && b < k && b - a < minSil) v.fill(1, a, b);
+    for (const [a, b, val] of runs()) if (val && b - a < minVoice) v.fill(0, a, b);
+    for (const [a, b, val] of runs()) if (!val && a > 0 && b < k && b - a < minSil) v.fill(1, a, b);
+    const segs = runs().filter((r) => r[2]).map(([a, b]) => ({ s: a * win, e: Math.min(S.mono.length, b * win) }));
+    const old = S.gaps;
+    S.segs = segs;
+    S.gaps = [];
+    for (let i = 0; i + 1 < segs.length; i++) {
+      const a = segs[i].e, b = segs[i + 1].s;
+      // 位置がほぼ同じ間は、個別の設定を引き継ぐ
+      const prev = old.find((g) => Math.abs(g.a - a) < sr * 0.15 && Math.abs(g.b - b) < sr * 0.15);
+      S.gaps.push({ a, b, orig: (b - a) / sr, custom: prev ? prev.custom : null, keep: prev ? prev.keep : false });
+    }
+    if (S.sel >= S.gaps.length) S.sel = S.gaps.length - 1;
+    if (S.sel < 0 && S.gaps.length) S.sel = 0;
+    build();
+  }
+
+  const kindOf = (g) => (g.keep ? "keep" : g.custom != null ? "custom" : g.orig < num("boundary") ? "short" : "long");
+  const pauseOf = (g) => (g.custom != null ? g.custom : g.orig < num("boundary") ? num("shortPause") : num("longPause"));
+
+  // ---------- 並べ直し ----------
+  function build() {
+    stop();
+    const buf = S.buf, sr = S.sr, n = buf.length, chs = buf.numberOfChannels;
+    const segs = S.segs, gaps = S.gaps;
+    if (!segs.length) { S.out = null; render(); return; }
+    const pre = Math.round(num("padPre") * sr), post = Math.round(num("padPost") * sr);
+    const cuts = segs.map((sg, i) => {
+      const lo = i ? Math.round((segs[i - 1].e + sg.s) / 2) : 0;
+      const hi = i + 1 < segs.length ? Math.round((sg.e + segs[i + 1].s) / 2) : n;
+      return { a: Math.max(lo, sg.s - pre), b: Math.min(hi, sg.e + post) };
+    });
+    const lead = Math.round(0.3 * sr), tail = Math.round(0.6 * sr), fadeN = Math.round(0.012 * sr);
+    // 長さの計算
+    let total = lead + tail;
+    cuts.forEach((c, i) => {
+      total += c.b - c.a;
+      if (i < gaps.length) total += gaps[i].keep ? cuts[i + 1].a - c.b : Math.round(pauseOf(gaps[i]) * sr);
+    });
+    const out = new AudioBuffer({ length: Math.max(1, total), numberOfChannels: chs, sampleRate: sr });
+    const map = [];
+    for (let ch = 0; ch < chs; ch++) {
+      const src = buf.getChannelData(ch), dst = out.getChannelData(ch);
+      let o = lead;
+      cuts.forEach((c, i) => {
+        const len = c.b - c.a;
+        dst.set(src.subarray(c.a, c.b), o);
+        const fadeIn = !(i > 0 && gaps[i - 1].keep), fadeOut = !(i < gaps.length && gaps[i].keep);
+        const f = Math.min(fadeN, len >> 1);
+        for (let x = 0; x < f; x++) {
+          if (fadeIn) dst[o + x] *= x / f;
+          if (fadeOut) dst[o + len - 1 - x] *= x / f;
+        }
+        o += len;
+        if (i < gaps.length) {
+          const g = gaps[i];
+          if (ch === 0) map[i] = { start: o / sr };
+          if (g.keep) { const k = cuts[i + 1].a - c.b; dst.set(src.subarray(c.b, cuts[i + 1].a), o); o += k; }
+          else o += Math.round(pauseOf(g) * sr);
+          if (ch === 0) map[i].end = o / sr;
+        }
+      });
+    }
+    S.out = out; S.outMap = map; S.cuts = cuts;
+    S.outPeaks = peaksOf(out.getChannelData(0), 1600);
+    render();
+  }
+
+  // ---------- 波形 ----------
+  function peaksOf(data, cols) {
+    const step = data.length / cols, p = new Float32Array(cols * 2);
+    for (let c = 0; c < cols; c++) {
+      let mn = 0, mx = 0; const a = Math.floor(c * step), b = Math.min(data.length, Math.floor((c + 1) * step));
+      for (let i = a; i < b; i += 4) { const v = data[i]; if (v < mn) mn = v; if (v > mx) mx = v; }
+      p[c * 2] = mn; p[c * 2 + 1] = mx;
+    }
+    return p;
+  }
+  function computePeaks() { S.peaks = peaksOf(S.mono, 1600); }
+
+  function setupCanvas(cv) {
+    const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.height / (cv._dpr || 1);
+    if (!cv._h) cv._h = cv.getAttribute("height") * 1;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(cv._h * dpr); cv._dpr = dpr;
+    cv.style.height = cv._h + "px";
+    const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { g, w, h: cv._h };
+  }
+
+  function drawPeaks(g, peaks, x0, w, h, color, from = 0, to = 1) {
+    const cols = peaks.length / 2, mid = h / 2;
+    g.fillStyle = color;
+    const c0 = Math.floor(from * cols), c1 = Math.ceil(to * cols), span = Math.max(1, c1 - c0);
+    for (let px = 0; px < w; px++) {
+      const c = c0 + Math.floor(px / w * span); if (c >= cols) break;
+      const mn = peaks[c * 2], mx = peaks[c * 2 + 1];
+      g.fillRect(x0 + px, mid - mx * mid * 0.95, 1, Math.max(1, (mx - mn) * mid * 0.95));
+    }
+  }
+
+  function drawWave(data, g, w, h, t0, t1, sr, color) {
+    const mid = h / 2, a = Math.max(0, Math.floor(t0 * sr)), b = Math.min(data.length, Math.floor(t1 * sr));
+    const per = (t1 - t0) * sr / w;
+    g.fillStyle = color;
+    for (let px = 0; px < w; px++) {
+      const s0 = Math.floor(t0 * sr + px * per), s1 = Math.floor(t0 * sr + (px + 1) * per);
+      if (s1 < a || s0 > b) continue;
+      let mn = 0, mx = 0;
+      for (let i = Math.max(a, s0); i < Math.min(b, s1); i++) { const v = data[i]; if (v < mn) mn = v; if (v > mx) mx = v; }
+      g.fillRect(px, mid - mx * mid * 0.95, 1, Math.max(1, (mx - mn) * mid * 0.95));
+    }
+  }
+
+  function render() {
+    renderOverview();
+    renderDetail();
+    renderRows();
+    renderStats();
+  }
+
+  function renderOverview() {
+    const sr = S.sr;
+    // 元
+    {
+      const { g, w, h } = setupCanvas($("cvOrig"));
+      g.clearRect(0, 0, w, h);
+      if (S.peaks) {
+        const dur = S.mono.length / sr;
+        S.gaps.forEach((gp, i) => {
+          const x = gp.a / sr / dur * w, x2 = gp.b / sr / dur * w;
+          g.fillStyle = i === S.sel ? css("--sel") : gp.keep ? css("--keep") : css("--gap-soft");
+          g.globalAlpha = i === S.sel ? 0.55 : gp.keep ? 0.35 : 1;
+          g.fillRect(x, 0, Math.max(2, x2 - x), h);
+          g.globalAlpha = 1;
+        });
+        drawPeaks(g, S.peaks, 0, w, h, css("--voice"));
+        drawPlayhead(g, w, h, "orig", dur);
+      }
+    }
+    // 調整後
+    {
+      const { g, w, h } = setupCanvas($("cvOut"));
+      g.clearRect(0, 0, w, h);
+      if (S.out) {
+        const dur = S.out.length / sr;
+        S.outMap.forEach((m, i) => {
+          const gp = S.gaps[i];
+          const x = m.start / dur * w, x2 = m.end / dur * w;
+          g.fillStyle = i === S.sel ? css("--sel") : gp.keep ? css("--keep") : css("--gap-soft");
+          g.globalAlpha = i === S.sel ? 0.55 : gp.keep ? 0.35 : 1;
+          g.fillRect(x, 0, Math.max(2, x2 - x), h);
+          g.globalAlpha = 1;
+        });
+        drawPeaks(g, S.outPeaks, 0, w, h, css("--voice"));
+        drawPlayhead(g, w, h, "out", dur);
+      }
+    }
+  }
+
+  function drawPlayhead(g, w, h, which, dur) {
+    const p = S.playing; if (!p || p.which !== which) return;
+    const t = p.from + (S.ctx.currentTime - p.t0);
+    g.fillStyle = css("--ink"); g.fillRect(t / dur * w, 0, 1.5, h);
+  }
+
+  function renderDetail() {
+    const sr = S.sr, gp = S.gaps[S.sel], m = S.outMap[S.sel];
+    for (const [id, cap] of [["cvDetO", "capO"], ["cvDetA", "capA"]]) {
+      const { g, w, h } = setupCanvas($(id)); g.clearRect(0, 0, w, h);
+      if (!gp) { $(cap).textContent = ""; continue; }
+      const orig = id === "cvDetO";
+      const a = orig ? gp.a / sr : m.start, b = orig ? gp.b / sr : m.end;
+      const t0 = a - 2, t1 = b + 2;
+      const x = (a - t0) / (t1 - t0) * w, x2 = (b - t0) / (t1 - t0) * w;
+      g.fillStyle = gp.keep && !orig ? css("--keep") : css("--gap-soft");
+      g.globalAlpha = gp.keep && !orig ? 0.3 : 1;
+      g.fillRect(x, 0, x2 - x, h); g.globalAlpha = 1;
+      g.fillStyle = css("--gap"); g.fillRect(x, 0, 1, h); g.fillRect(x2 - 1, 0, 1, h);
+      drawWave(orig ? S.mono : S.out.getChannelData(0), g, w, h, t0, t1, sr, css("--voice"));
+      g.fillStyle = css("--ink"); g.font = `700 13px ${css("--f-ui")}`; g.textAlign = "center";
+      g.fillText(`${(b - a).toFixed(2)} 秒`, (x + x2) / 2, 18);
+      $(cap).textContent = orig ? `${fmt(a)} 〜 ${fmt(b)}` : `${fmt(a)} 〜 ${fmt(b)}`;
+    }
+  }
+
+  function renderStats() {
+    const st = $("stats"); st.innerHTML = "";
+    $("fileName").textContent = S.name || "（録音が読み込まれていません）";
+    if (!S.buf) return;
+    const add = (html, cls) => { const s = document.createElement("span"); s.className = "chip" + (cls ? " " + cls : ""); s.innerHTML = html; st.appendChild(s); };
+    if (S.sample) add("サンプル（合成音）", "sample-tag");
+    add(`元の長さ <b>${fmt(S.buf.duration)}</b>`);
+    if (S.out) add(`調整後 <b>${fmt(S.out.duration)}</b>`);
+    add(`声のかたまり <b>${S.segs.length}</b>`);
+    add(`間 <b>${S.gaps.length}</b>（個別 ${S.gaps.filter((g) => g.custom != null || g.keep).length}）`);
+    $("save").disabled = !S.out;
+  }
+
+  // ---------- 一覧 ----------
+  const KIND = { short: "短い間", long: "長い間", custom: "個別", keep: "切らない" };
+  function renderRows() {
+    const tb = $("rows"); tb.innerHTML = "";
+    const frag = document.createDocumentFragment();
+    S.gaps.forEach((gp, i) => {
+      const tr = document.createElement("tr"); if (i === S.sel) tr.className = "sel";
+      const k = kindOf(gp);
+      tr.innerHTML = `<td>${i + 1}</td><td>${fmt(gp.a / S.sr)}</td><td class="num">${gp.orig.toFixed(2)} 秒</td>
+        <td><span class="kind ${k}">${KIND[k]}</span></td>
+        <td><input type="number" id="p${i}" min="0" max="20" step="0.1" value="${pauseOf(gp).toFixed(1)}" ${gp.keep ? "disabled" : ""} aria-label="${i + 1}番目の新しい間"></td>
+        <td><input type="checkbox" id="k${i}" ${gp.keep ? "checked" : ""} aria-label="${i + 1}番目を切らない"></td>
+        <td><button type="button" data-hear="${i}" aria-label="${i + 1}番目の前後を聞く">前後を聞く</button></td>`;
+      tr.addEventListener("click", (e) => { if (e.target.closest("input,button")) return; select(i); });
+      frag.appendChild(tr);
+    });
+    tb.appendChild(frag);
+  }
+  $("rows").addEventListener("change", (e) => {
+    const t = e.target, i = parseInt(t.id.slice(1), 10); if (Number.isNaN(i)) return;
+    const gp = S.gaps[i];
+    if (t.id[0] === "p") gp.custom = Math.max(0, parseFloat(t.value) || 0);
+    if (t.id[0] === "k") gp.keep = t.checked;
+    S.sel = i; build();
+  });
+  $("rows").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-hear]"); if (!b) return;
+    const i = parseInt(b.dataset.hear, 10); select(i, false);
+    const m = S.outMap[i]; play("out", Math.max(0, m.start - 2), m.end + 2);
+  });
+  function select(i, scroll = true) {
+    S.sel = i; renderOverview(); renderDetail();
+    [...$("rows").children].forEach((tr, j) => tr.classList.toggle("sel", j === i));
+    if (scroll) { const tr = $("rows").children[i]; if (tr) tr.scrollIntoView({ block: "nearest" }); }
+  }
+  for (const id of ["cvOrig", "cvOut"]) {
+    $(id).addEventListener("click", (e) => {
+      if (!S.out) return;
+      const r = e.target.getBoundingClientRect(), f = (e.clientX - r.left) / r.width;
+      const orig = id === "cvOrig", dur = orig ? S.mono.length / S.sr : S.out.duration, t = f * dur;
+      let best = -1, bd = Infinity;
+      S.gaps.forEach((gp, i) => {
+        const a = orig ? gp.a / S.sr : S.outMap[i].start, b = orig ? gp.b / S.sr : S.outMap[i].end;
+        const d = t < a ? a - t : t > b ? t - b : 0; if (d < bd) { bd = d; best = i; }
+      });
+      if (best >= 0) select(best);
+    });
+  }
+
+  // ---------- 設定の変更 ----------
+  const live = (id, vid, digits) => { $(id).addEventListener("input", () => { $(vid).textContent = (+$(id).value).toFixed(digits); }); };
+  live("boundary", "boundaryV", 2); live("thr", "thrV", 0); live("minSil", "minSilV", 2);
+  for (const id of ["shortPause", "longPause", "boundary", "padPre", "padPost"]) $(id).addEventListener("change", () => S.buf && build());
+  for (const id of ["thr", "minSil"]) $(id).addEventListener("change", () => S.buf && detect());
+  document.querySelectorAll("[data-preset]").forEach((b) => b.addEventListener("click", () => {
+    const [s, l] = b.dataset.preset.split(","); $("shortPause").value = s; $("longPause").value = l; if (S.buf) build();
+  }));
+  $("resetCustom").addEventListener("click", () => { S.gaps.forEach((g) => { g.custom = null; g.keep = false; }); if (S.buf) build(); });
+
+  // ---------- 再生 ----------
+  function ensureCtx() { if (!S.ctx) S.ctx = new (window.AudioContext || window.webkitAudioContext)(); if (S.ctx.state === "suspended") S.ctx.resume(); return S.ctx; }
+  function play(which, from = 0, to = null) {
+    stop();
+    const ctx = ensureCtx(), buf = which === "orig" ? S.buf : S.out; if (!buf) return;
+    const src = ctx.createBufferSource(); src.buffer = buf; src.connect(ctx.destination);
+    const end = to == null ? buf.duration : Math.min(buf.duration, to);
+    src.start(0, from, Math.max(0.01, end - from));
+    S.src = src; S.playing = { which, from, t0: ctx.currentTime, end };
+    src.onended = () => { if (S.src === src) { S.src = null; S.playing = null; renderOverview(); $("playInd").textContent = ""; } };
+    tick();
+  }
+  function stop() { if (S.src) { try { S.src.stop(); } catch (e) {} S.src = null; } S.playing = null; $("playInd").textContent = ""; }
+  function tick() {
+    if (!S.playing) return;
+    const p = S.playing, t = p.from + (S.ctx.currentTime - p.t0);
+    $("playInd").textContent = `${p.which === "orig" ? "元" : "調整後"} ${fmt(Math.min(t, p.end))}`;
+    renderOverview();
+    requestAnimationFrame(tick);
+  }
+  $("playOrig").addEventListener("click", () => play("orig"));
+  $("playOut").addEventListener("click", () => play("out"));
+  $("stop").addEventListener("click", () => { stop(); renderOverview(); });
+
+  // ---------- 保存（16bit WAV） ----------
+  function wavBlob(buf) {
+    const chs = buf.numberOfChannels, n = buf.length, sr = buf.sampleRate;
+    const dv = new DataView(new ArrayBuffer(44 + n * chs * 2));
+    const w = (o, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
+    w(0, "RIFF"); dv.setUint32(4, 36 + n * chs * 2, true); w(8, "WAVE"); w(12, "fmt ");
+    dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, chs, true);
+    dv.setUint32(24, sr, true); dv.setUint32(28, sr * chs * 2, true); dv.setUint16(32, chs * 2, true); dv.setUint16(34, 16, true);
+    w(36, "data"); dv.setUint32(40, n * chs * 2, true);
+    const data = []; for (let c = 0; c < chs; c++) data.push(buf.getChannelData(c));
+    let o = 44;
+    for (let i = 0; i < n; i++) for (let c = 0; c < chs; c++) { const v = Math.max(-1, Math.min(1, data[c][i])); dv.setInt16(o, v < 0 ? v * 0x8000 : v * 0x7fff, true); o += 2; }
+    return new Blob([dv], { type: "audio/wav" });
+  }
+  $("save").addEventListener("click", () => {
+    if (!S.out) return;
+    const url = URL.createObjectURL(wavBlob(S.out));
+    const a = document.createElement("a");
+    a.href = url; a.download = (S.name.replace(/\.[^.]+$/, "") || "録音") + "_間調整.wav";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    setStatus(`保存しました：${a.download}（ブラウザのダウンロード先に入ります）`);
+  });
+
+  // ---------- 最初に見せるサンプル（合成音） ----------
+  function makeSample() {
+    const sr = 44100, phrases = [1.6, 0.9, 2.1, 1.2, 0.7, 1.8, 1.4, 2.3];
+    const gapsSec = [0.12, 0.45, 0.18, 0.6, 0.15, 0.4, 0.2];
+    const total = 0.3 + phrases.reduce((a, b) => a + b, 0) + gapsSec.reduce((a, b) => a + b, 0) + 0.5;
+    const buf = new AudioBuffer({ length: Math.ceil(total * sr), numberOfChannels: 1, sampleRate: sr });
+    const d = buf.getChannelData(0);
+    let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (let i = 0; i < d.length; i++) d[i] = (rnd() - 0.5) * 0.002;
+    let t = 0.3;
+    phrases.forEach((len, pi) => {
+      const syl = Math.max(3, Math.round(len / 0.16));
+      for (let s = 0; s < syl; s++) {
+        const st = t + (s * len) / syl, du = (len / syl) * 0.85, f0 = 150 + 25 * Math.sin(pi + s * 0.7);
+        const a = Math.floor(st * sr), b = Math.floor((st + du) * sr);
+        for (let i = a; i < b && i < d.length; i++) {
+          const x = (i - a) / (b - a), env = Math.sin(Math.PI * x) ** 0.6, tt = i / sr;
+          d[i] += env * 0.28 * (Math.sin(2 * Math.PI * f0 * tt) * 0.6 + Math.sin(2 * Math.PI * f0 * 2.02 * tt) * 0.3 + Math.sin(2 * Math.PI * (700 + 200 * Math.sin(s)) * tt) * 0.15);
+        }
+      }
+      t += len + (gapsSec[pi] || 0);
+    });
+    S.buf = buf; S.name = "サンプル音声（自分の録音を読み込むと置き換わります）"; S.sample = true; S.sel = 1;
+    analyze();
+  }
+
+  let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => S.buf && (renderOverview(), renderDetail()), 120); });
+  try { makeSample(); } catch (e) { setStatus("このブラウザでは動きません。Chrome か Edge で開いてください。"); }
+})();
+</script>
+</body>
+</html>
